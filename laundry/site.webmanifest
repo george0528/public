@@ -3,7 +3,7 @@
   "short_name": "洗濯洗剤・柔軟剤計算機",
   "display": "standalone",
   "background_color": "#ffffff",
-  "start_url": "/index.html",
+  "start_url": "/public/laundry/",
   "icons": [
     {
       "src": "./assets/img/icon-192.png",
