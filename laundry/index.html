@@ -443,5 +443,12 @@
         window.addEventListener('load', adjustScroll);
         window.addEventListener('resize', adjustScroll);
     </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register('./assets/js/sw.js');
+        });
+      }
+    </script>
 </body>
 </html>
