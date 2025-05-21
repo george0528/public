@@ -1,5 +1,5 @@
 var CACHE_NAME = 'pwa-sample';
-var urlsToCache = ['../../index.html', '../js/main.js', '../css/main.css'];
+var urlsToCache = ['../../index.html'];
 
 // インストール処理
 self.addEventListener('install', function (event) {
