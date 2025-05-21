@@ -5,16 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>洗濯洗剤・柔軟剤計算機</title>
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* 横スクロールを無効化 */
+        }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+            min-height: 100%;
             background-color: #f5f5f5;
             color: #333;
+            overflow-y: auto; /* 必要な場合のみ縦スクロールを許可 */
         }
         .container {
             width: 90%;
@@ -22,35 +28,39 @@
             background-color: white;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem 2rem 2rem 2rem;
+            padding: 1.5rem 1.5rem 2rem 1.5rem;
             text-align: center;
+            box-sizing: border-box; /* パディングを幅に含める */
         }
         h1 {
             color: #2c3e50;
             margin-bottom: 1rem;
+            font-size: 1.6rem;
         }
         h2 {
             color: #2c3e50;
             font-size: 1.3rem;
-            margin: 0 0 0.5rem;
+            margin: 0.5rem 0 0.5rem;
         }
         .button-group {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 0.6rem;
+            gap: 0.5rem;
             margin-bottom: 0.8rem;
         }
         .cup-button {
             background-color: #f8f9fa;
             border: 2px solid #ddd;
             border-radius: 10px;
-            padding: 1rem 1.5rem;
-            font-size: 1.3rem;
+            padding: 0.9rem 1.2rem;
+            font-size: 1.2rem;
             cursor: pointer;
             transition: all 0.2s ease;
-            min-width: 80px;
+            min-width: 70px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-grow: 0;
+            flex-shrink: 0;
         }
         .cup-button:hover {
             background-color: #e9ecef;
@@ -70,14 +80,16 @@
             background-color: #f1f1f1;
             border: 1px solid #ddd;
             border-radius: 10px;
-            padding: 0.8rem 1.2rem;
-            font-size: 1.1rem;
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.2s ease;
             margin-bottom: 1rem;
             color: #666;
-            min-width: 200px;
+            width: 90%;
+            max-width: 250px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
         .toggle-button:hover {
             background-color: #e9ecef;
@@ -100,6 +112,7 @@
             display: none;
             margin-bottom: 1rem;
             animation: fadeIn 0.3s ease;
+            width: 100%;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
@@ -110,11 +123,12 @@
             justify-content: space-around;
             margin-top: 0.8rem;
             margin-bottom: 0.5rem;
+            width: 100%;
         }
         .amount {
             flex: 1;
-            padding: 1rem;
-            margin: 0 0.5rem;
+            padding: 0.8rem;
+            margin: 0 0.3rem;
             border-radius: 10px;
             transition: all 0.3s ease;
         }
@@ -127,12 +141,12 @@
             color: white;
         }
         .amount h2 {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin-bottom: 0.3rem;
             color: white;
         }
         .amount p {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: bold;
             margin: 0;
         }
@@ -152,6 +166,13 @@
         }
         
         /* テーブルスタイル */
+        .table-container {
+            margin-top: 0.8rem;
+            border-top: 1px solid #eee;
+            padding-top: 0.8rem;
+            width: 100%;
+            overflow-x: auto; /* テーブルが大きい場合のみ横スクロール */
+        }
         .reference-table {
             width: 100%;
             margin: 0.8rem auto;
@@ -159,18 +180,18 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
             overflow: hidden;
+            table-layout: fixed; /* 固定幅のテーブルレイアウト */
+        }
+        .reference-table th, .reference-table td {
+            padding: 0.7rem 0.5rem;
+            text-align: center;
+            border: 1px solid #ddd;
+            word-break: keep-all; /* 単語の途中で改行しない */
+            white-space: nowrap; /* テキストを折り返さない */
         }
         .reference-table th {
             background-color: #f1f1f1;
-            padding: 0.7rem;
-            text-align: center;
             font-weight: bold;
-            border: 1px solid #ddd;
-        }
-        .reference-table td {
-            padding: 0.7rem;
-            text-align: center;
-            border: 1px solid #ddd;
         }
         .reference-table tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -182,45 +203,55 @@
             background-color: #e8f4fc;
             font-weight: bold;
         }
-        .table-container {
-            margin-top: 0.8rem;
-            border-top: 1px solid #eee;
-            padding-top: 0.8rem;
-        }
         
         @media (max-width: 480px) {
             .container {
-                padding: 1.2rem;
                 width: 95%;
+                padding: 1rem;
+                margin: 0.5rem;
             }
             h1 {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
                 margin-bottom: 0.8rem;
             }
             h2 {
-                font-size: 1.2rem;
-                margin: 0 0 0.5rem;
+                font-size: 1.1rem;
+                margin: 0.5rem 0 0.5rem;
+            }
+            .button-group {
+                gap: 0.4rem;
             }
             .cup-button {
-                font-size: 1.2rem;
-                padding: 0.8rem 1.2rem;
-                min-width: 70px;
+                font-size: 1.1rem;
+                padding: 0.7rem 0.9rem;
+                min-width: 60px;
             }
             .toggle-button {
-                font-size: 1rem;
-                padding: 0.7rem 1rem;
-                min-width: 180px;
+                font-size: 0.9rem;
+                padding: 0.6rem 0.8rem;
+                width: 95%;
             }
             .amount {
-                padding: 0.8rem;
+                padding: 0.7rem 0.5rem;
+                margin: 0 0.2rem;
+            }
+            .amount h2 {
+                font-size: 1rem;
             }
             .amount p {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
             .reference-table th,
             .reference-table td {
-                padding: 0.6rem 0.4rem;
+                padding: 0.5rem 0.3rem;
                 font-size: 0.9rem;
+            }
+        }
+        
+        /* 縦幅が十分ある場合はスクロールを無効化 */
+        @media (min-height: 700px) {
+            body {
+                overflow-y: hidden;
             }
         }
     </style>
@@ -394,6 +425,22 @@
         
         // 初期値を設定（オプション）
         // document.querySelector('.cup-button[data-value="0.5"]').click();
+        
+        // ページの高さに応じてスクロールを制御
+        function adjustScroll() {
+            const windowHeight = window.innerHeight;
+            const contentHeight = document.querySelector('.container').offsetHeight;
+            
+            if (contentHeight <= windowHeight) {
+                document.body.style.overflowY = 'hidden';
+            } else {
+                document.body.style.overflowY = 'auto';
+            }
+        }
+        
+        // ページ読み込み時とリサイズ時にスクロール制御を実行
+        window.addEventListener('load', adjustScroll);
+        window.addEventListener('resize', adjustScroll);
     </script>
 </body>
 </html>
