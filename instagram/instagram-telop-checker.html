@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Reels テロップ確認ツール</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a1a;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  /* URL入力 */
+  .url-input-area {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 500px;
+  }
+  .url-input-area input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+  .url-input-area input:focus { border-color: #0095f6; }
+  .url-input-area button {
+    padding: 10px 20px;
+    background: #0095f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .url-input-area button:hover { background: #0081d6; }
+
+  /* コントロール */
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .controls input[type="range"] { width: 120px; }
+
+  /* プレーヤーコンテナ - 9:16比率 */
+  .player-container {
+    position: relative;
+    width: 360px;
+    height: 640px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #333;
+  }
+  .player-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  /* オーバーレイ */
+  .overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.hidden { opacity: 0; }
+
+  .zone {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .zone-danger { background: rgba(255, 0, 0, 0.25); border: 1px solid rgba(255, 0, 0, 0.5); }
+  .zone-warn { background: rgba(255, 165, 0, 0.2); border: 1px solid rgba(255, 165, 0, 0.4); }
+  .zone-safe { border: 2px solid rgba(0, 200, 0, 0.6); background: transparent; }
+
+  /* UIアイコン群 */
+  .ui-icon {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 8px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .ui-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: #fff;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+    margin-bottom: 2px;
+  }
+
+  .ui-text {
+    position: absolute;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    font-weight: 600;
+  }
+
+  /* ナビバーアイコン */
+  .nav-bar {
+    position: absolute;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    color: #fff;
+  }
+  .nav-bar .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 7px;
+  }
+  .nav-bar .nav-item svg {
+    width: 18px;
+    height: 18px;
+    fill: #fff;
+    margin-bottom: 1px;
+  }
+
+  /* 凡例 */
+  .legend {
+    margin-top: 16px;
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+
+  .error-msg {
+    color: #ff4444;
+    font-size: 13px;
+    margin-bottom: 8px;
+    min-height: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>Instagram Reels テロップ確認ツール</h1>
+
+<div class="url-input-area">
+  <input type="text" id="urlInput" placeholder="YouTube URL を貼り付け (shorts / watch / youtu.be)">
+  <button onclick="loadVideo()">読み込み</button>
+</div>
+
+<div class="error-msg" id="errorMsg"></div>
+
+<div class="controls">
+  <label>
+    <input type="checkbox" id="overlayToggle" checked onchange="toggleOverlay()">
+    オーバーレイ表示
+  </label>
+  <label>
+    透明度:
+    <input type="range" id="opacitySlider" min="0" max="100" value="100" oninput="updateOpacity()">
+    <span id="opacityValue">100%</span>
+  </label>
+</div>
+
+<div class="player-container">
+  <div class="placeholder" id="placeholder">YouTube URL を入力して<br>「読み込み」を押してください</div>
+  <div id="iframeContainer"></div>
+
+  <!-- オーバーレイ -->
+  <div class="overlay" id="overlay">
+    <!-- 危険: ステータスバー Y:0-200 -->
+    <div class="zone zone-danger" style="left:0; top:0; width:100%; height:10.42%;">ステータスバー</div>
+
+    <!-- 危険: ナビバー Y:1815-1920 -->
+    <div class="zone zone-danger" style="left:0; top:94.53%; width:100%; height:5.47%;">ナビバー</div>
+
+    <!-- 危険: 下部情報エリア Y:1470-1815 -->
+    <div class="zone zone-danger" style="left:0; top:76.56%; width:85.19%; height:17.97%;">下部情報 (ユーザー名・キャプション)</div>
+
+    <!-- 危険: 右サイドバー X:920-1060, Y:1100-1720 -->
+    <div class="zone zone-danger" style="left:85.19%; top:57.29%; width:14.81%; height:32.29%;">サイド<br>バー</div>
+
+    <!-- 安全領域: X:40-900, Y:200-1180 -->
+    <div class="zone zone-safe" style="left:3.7%; top:10.42%; width:79.63%; height:51.04%;">安全領域</div>
+
+    <!-- 右サイドバー UIアイコン -->
+    <!-- いいね: 中央 X:990, Y:1150 -->
+    <div class="ui-icon" style="right:4%; top:59%;">
+      <svg viewBox="0 0 24 24"><path d="M16.792 3.904A4.989 4.989 0 0121.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-1.834-1.527-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 014.708-5.218 4.21 4.21 0 013.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 013.679-1.938z"/></svg>
+      <span>いいね</span>
+    </div>
+
+    <!-- コメント: X:990, Y:1300 -->
+    <div class="ui-icon" style="right:4%; top:67%;">
+      <svg viewBox="0 0 24 24"><path d="M20.656 17.008a9.993 9.993 0 10-3.59 3.615L22 22z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span>コメント</span>
+    </div>
+
+    <!-- シェア: X:990, Y:1450 -->
+    <div class="ui-icon" style="right:4%; top:75%;">
+      <svg viewBox="0 0 24 24"><path d="M22 3L9.218 10.083M11.698 20.334L22 3.001H2l7.218 7.083 2.48 10.25z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span>シェア</span>
+    </div>
+
+    <!-- その他: X:990, Y:1580 -->
+    <div class="ui-icon" style="right:4%; top:82%;">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
+      <span>その他</span>
+    </div>
+
+    <!-- 音源アイコン: X:990, Y:1700 -->
+    <div class="ui-icon" style="right:3%; top:88%; width:24px; height:24px; border:2px solid #fff; border-radius:6px; overflow:hidden;">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin:0;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    </div>
+
+    <!-- ユーザー名 (下部左) -->
+    <div class="ui-text" style="left:3.7%; bottom:18%; font-size:10px;">username</div>
+
+    <!-- キャプション (下部左) -->
+    <div class="ui-text" style="left:3.7%; bottom:13%; font-size:8px; max-width:75%; opacity:0.8;">キャプションテキストがここに表示されます... もっと見る</div>
+
+    <!-- 音源名 (下部左) -->
+    <div class="ui-text" style="left:3.7%; bottom:9%; font-size:8px; opacity:0.7;">♪ オリジナル音源 - username</div>
+
+    <!-- ナビバーアイコン -->
+    <div class="nav-bar" style="bottom:1%; height:4%;">
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M9.005 16.545a2.997 2.997 0 012.997-2.997h0A2.997 2.997 0 0115 16.545V22H9.005z" fill="none" stroke="#fff" stroke-width="2"/><path d="M2.89 11.07l8.428-8.428a1 1 0 011.414 0l8.428 8.428" fill="none" stroke="#fff" stroke-width="2"/></svg>
+        <span>ホーム</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="#fff" stroke-width="2"/><line x1="16" y1="16" x2="21" y2="21" stroke="#fff" stroke-width="2"/></svg>
+        <span>検索</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="#fff" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="16" stroke="#fff" stroke-width="2"/><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"/></svg>
+        <span>投稿</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M2 17.5l2.5-2.5L12 5l7.5 10L22 17.5" fill="none" stroke="#fff" stroke-width="2"/></svg>
+        <span>リール</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5" fill="none" stroke="#fff" stroke-width="2"/><path d="M3 21v-2a7 7 0 0114 0v2" fill="none" stroke="#fff" stroke-width="2"/></svg>
+        <span>プロフィール</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-color" style="background:rgba(255,0,0,0.4);"></div>危険領域</div>
+  <div class="legend-item"><div class="legend-color" style="background:rgba(255,165,0,0.35);"></div>注意領域</div>
+  <div class="legend-item"><div class="legend-color" style="border:2px solid rgba(0,200,0,0.7);"></div>安全領域</div>
+</div>
+
+<script>
+function parseYouTubeId(url) {
+  url = url.trim();
+  let m;
+  // shorts
+  m = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (m) return m[1];
+  // watch
+  m = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
+  if (m) return m[1];
+  // youtu.be
+  m = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (m) return m[1];
+  return null;
+}
+
+function loadVideo() {
+  const url = document.getElementById('urlInput').value;
+  const errorMsg = document.getElementById('errorMsg');
+  const videoId = parseYouTubeId(url);
+
+  if (!videoId) {
+    errorMsg.textContent = 'YouTube URLを認識できません。shorts / watch / youtu.be 形式で入力してください。';
+    return;
+  }
+
+  errorMsg.textContent = '';
+  document.getElementById('placeholder').style.display = 'none';
+
+  const container = document.getElementById('iframeContainer');
+  container.innerHTML = `<iframe
+    src="https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&playsinline=1"
+    allow="autoplay; encrypted-media; picture-in-picture"
+    allowfullscreen
+    style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;">
+  </iframe>`;
+}
+
+function toggleOverlay() {
+  const overlay = document.getElementById('overlay');
+  const checked = document.getElementById('overlayToggle').checked;
+  overlay.classList.toggle('hidden', !checked);
+}
+
+function updateOpacity() {
+  const val = document.getElementById('opacitySlider').value;
+  document.getElementById('opacityValue').textContent = val + '%';
+  document.getElementById('overlay').style.opacity = val / 100;
+}
+
+// Enterキーで読み込み
+document.getElementById('urlInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') loadVideo();
+});
+</script>
+</body>
+</html>
