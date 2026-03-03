@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Reels テロップ安全領域ガイド</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #fff;
+  }
+  h1 { font-size: 18px; margin-bottom: 8px; }
+  .info { font-size: 13px; color: #aaa; margin-bottom: 16px; text-align: center; line-height: 1.6; }
+  .container {
+    position: relative;
+    width: 360px;
+    height: 640px;
+    background: #000;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  /* Scale factor: 360/1080 = 0.3333 */
+  /* All positions are calculated from 1080x1920 base */
+
+  .safe-zone {
+    position: absolute;
+    /* x: 40-900 → 13-300px, y: 200-1180 → 67-393px */
+    left: 13px; top: 67px;
+    width: 287px; height: 326px;
+    border: 2px solid #00ff88;
+    border-radius: 8px;
+    z-index: 10;
+  }
+  .safe-label {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #00ff88;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.5;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  /* Danger zones */
+  .danger-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 67px; /* ~200/1920*640 */
+    background: rgba(255, 0, 0, 0.25);
+    z-index: 5;
+  }
+  .danger-right {
+    position: absolute;
+    right: 0;
+    width: 56px; /* (1080-920)/1080*360 */
+    top: 370px; /* ~1100/1920*640 */
+    bottom: 70px;
+    background: rgba(255, 0, 0, 0.25);
+    z-index: 5;
+  }
+  .danger-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 175px; /* ~525/1920*640 */
+    background: rgba(255, 0, 0, 0.25);
+    z-index: 5;
+  }
+
+  /* Caution zone (medium risk) */
+  .caution-bottom {
+    position: absolute;
+    bottom: 175px; left: 0; right: 56px;
+    height: 98px; /* ~y:1180-1470 area */
+    background: rgba(255, 165, 0, 0.15);
+    z-index: 4;
+  }
+
+  /* UI element indicators */
+  .ui-element {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .ui-element svg { fill: #fff; opacity: 0.85; }
+  .ui-element .label {
+    color: #fff;
+    font-size: 9px;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
+  /* Right sidebar buttons - mapped from viewport coordinates */
+  /* Like: viewport (366,569) → 1080 scale: (955,1220) → display: (318,407) */
+  .btn-like { right: 14px; top: 407px; width: 24px; height: 24px; }
+  /* Comment: viewport (366,633) → display: (318,453) */
+  .btn-comment { right: 14px; top: 453px; width: 24px; height: 24px; }
+  .btn-comment-count { right: 10px; top: 480px; }
+  /* Share: viewport (366,697) → display: (318,499) */
+  .btn-share { right: 14px; top: 499px; width: 24px; height: 24px; }
+  /* More: viewport (366,749) → display: (318,536) */
+  .btn-more { right: 14px; top: 536px; width: 24px; height: 24px; }
+  /* Audio thumb: viewport (366,802) → display: (318,574) */
+  .btn-audio { right: 14px; top: 574px; width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.7); border-radius: 4px; }
+
+  /* Bottom info area */
+  /* Username: viewport (16,727) → display: (5,520) */
+  .info-username { left: 5px; bottom: 118px; height: 22px; }
+  /* Follow btn: viewport (164,727) */
+  .info-follow { left: 55px; bottom: 118px; }
+  /* Caption: viewport (16,767) → display */
+  .info-caption { left: 5px; bottom: 96px; }
+  /* Music: viewport (16,801) */
+  .info-music { left: 5px; bottom: 72px; }
+  /* Location tag */
+  .info-location { left: 62px; bottom: 72px; }
+
+  /* Nav bar */
+  .nav-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 35px;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 20;
+  }
+  .nav-bar .label { font-size: 10px; opacity: 0.7; }
+
+  /* Legend */
+  .legend {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    width: 360px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legend-color {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .legend-text { line-height: 1.4; }
+  .legend-text small { color: #999; display: block; }
+
+  /* Pixel info */
+  .pixel-info {
+    margin-top: 16px;
+    width: 360px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .pixel-info h3 { font-size: 14px; margin-bottom: 8px; color: #00ff88; }
+  .pixel-info .coord { color: #ffcc00; font-family: monospace; }
+
+  /* Download button */
+  .download-btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #00ff88;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .download-btn:hover { background: #00dd77; }
+</style>
+</head>
+<body>
+
+<h1>Instagram Reels テロップ安全領域ガイド</h1>
+<p class="info">解像度: 1080 x 1920 px (9:16)<br>下のプレビューは 1/3 スケール表示です</p>
+
+<div class="container" id="guide">
+  <!-- Safe zone -->
+  <div class="safe-zone">
+    <div class="safe-label">SAFE ZONE<br><span style="font-size:11px;font-weight:normal">テロップ安全領域</span></div>
+  </div>
+
+  <!-- Danger zones -->
+  <div class="danger-top"></div>
+  <div class="danger-right"></div>
+  <div class="danger-bottom"></div>
+
+  <!-- Caution zone -->
+  <div class="caution-bottom"></div>
+
+  <!-- Right sidebar UI elements -->
+  <div class="ui-element btn-like">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+  </div>
+  <div class="ui-element btn-comment">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </div>
+  <div class="ui-element btn-comment-count"><span class="label">36</span></div>
+  <div class="ui-element btn-share">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+  </div>
+  <div class="ui-element btn-more">
+    <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+  </div>
+  <div class="ui-element btn-audio"></div>
+
+  <!-- Bottom info -->
+  <div class="ui-element info-username"><span class="label" style="font-weight:bold">masack_1211</span></div>
+  <div class="ui-element info-follow"><span class="label" style="border:1px solid rgba(255,255,255,0.5);padding:2px 6px;border-radius:4px;font-size:8px">フォローする</span></div>
+  <div class="ui-element info-caption"><span class="label" style="font-size:10px">150%の嘘で正面突破をしてくるイキリ...</span></div>
+  <div class="ui-element info-music"><span class="label" style="font-size:8px">♪ Stranger Things...</span></div>
+  <div class="ui-element info-location"><span class="label" style="font-size:8px">📍 東京都</span></div>
+
+  <!-- Nav bar -->
+  <div class="nav-bar">
+    <span class="label">🏠</span>
+    <span class="label">🔍</span>
+    <span class="label">▶️</span>
+    <span class="label">🛒</span>
+    <span class="label">👤</span>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-color" style="background:#00ff88;"></div>
+    <div class="legend-text">安全領域（テロップ配置OK）<small>UI要素と被らない領域</small></div>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background:rgba(255,165,0,0.5);"></div>
+    <div class="legend-text">注意領域（短いテロップなら可）<small>右端のボタンに注意</small></div>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background:rgba(255,0,0,0.5);"></div>
+    <div class="legend-text">危険領域（テロップ配置NG）<small>UI要素に完全に被る</small></div>
+  </div>
+</div>
+
+<!-- Pixel coordinates -->
+<div class="pixel-info">
+  <h3>座標データ (1080x1920 基準)</h3>
+  <b>テロップ安全領域:</b><br>
+  &nbsp;&nbsp;X: <span class="coord">40 〜 900 px</span><br>
+  &nbsp;&nbsp;Y: <span class="coord">200 〜 1180 px</span><br>
+  <br>
+  <b>右サイドバー (いいね/コメント/シェア等):</b><br>
+  &nbsp;&nbsp;X: <span class="coord">920 〜 1060 px</span><br>
+  &nbsp;&nbsp;Y: <span class="coord">1100 〜 1720 px</span><br>
+  <br>
+  <b>下部情報エリア (ユーザー名/キャプション/音楽):</b><br>
+  &nbsp;&nbsp;X: <span class="coord">0 〜 900 px</span><br>
+  &nbsp;&nbsp;Y: <span class="coord">1470 〜 1720 px</span><br>
+  <br>
+  <b>ナビゲーションバー:</b><br>
+  &nbsp;&nbsp;Y: <span class="coord">1815 〜 1920 px</span><br>
+  <br>
+  <b>ステータスバー (上部):</b><br>
+  &nbsp;&nbsp;Y: <span class="coord">0 〜 200 px</span><br>
+</div>
+
+<button class="download-btn" onclick="downloadSVG()">SVGガイドをダウンロード</button>
+
+<script>
+function downloadSVG() {
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <!-- Background (transparent - overlay on your video) -->
+  <rect width="1080" height="1920" fill="none"/>
+
+  <!-- Danger: Top status bar -->
+  <rect x="0" y="0" width="1080" height="200" fill="rgba(255,0,0,0.25)"/>
+
+  <!-- Danger: Bottom info + nav -->
+  <rect x="0" y="1470" width="1080" height="450" fill="rgba(255,0,0,0.25)"/>
+
+  <!-- Danger: Right sidebar buttons -->
+  <rect x="920" y="1100" width="160" height="620" fill="rgba(255,0,0,0.25)" rx="8"/>
+
+  <!-- Caution: mid-bottom area -->
+  <rect x="0" y="1180" width="920" height="290" fill="rgba(255,165,0,0.15)"/>
+
+  <!-- Safe zone border -->
+  <rect x="40" y="200" width="860" height="980" fill="none" stroke="#00ff88" stroke-width="4" rx="16"/>
+
+  <!-- Safe zone label -->
+  <text x="470" y="680" text-anchor="middle" fill="#00ff88" font-size="48" font-weight="bold" font-family="sans-serif">SAFE ZONE</text>
+  <text x="470" y="730" text-anchor="middle" fill="#00ff88" font-size="28" font-family="sans-serif">テロップ安全領域</text>
+  <text x="470" y="775" text-anchor="middle" fill="#00ff88" font-size="22" font-family="sans-serif" opacity="0.7">X: 40-900  Y: 200-1180</text>
+
+  <!-- Right sidebar icons representation -->
+  <text x="985" y="1240" text-anchor="middle" fill="white" font-size="20" opacity="0.7">♡ いいね</text>
+  <text x="985" y="1380" text-anchor="middle" fill="white" font-size="20" opacity="0.7">💬 コメント</text>
+  <text x="985" y="1510" text-anchor="middle" fill="white" font-size="20" opacity="0.7">↗ シェア</text>
+  <text x="985" y="1630" text-anchor="middle" fill="white" font-size="20" opacity="0.7">⋯ その他</text>
+  <text x="985" y="1710" text-anchor="middle" fill="white" font-size="20" opacity="0.7">♪ 音源</text>
+
+  <!-- Bottom info labels -->
+  <text x="50" y="1520" fill="white" font-size="24" font-weight="bold" opacity="0.7">username  フォローする</text>
+  <text x="50" y="1580" fill="white" font-size="20" opacity="0.7">キャプションテキスト...</text>
+  <text x="50" y="1640" fill="white" font-size="18" opacity="0.7">♪ 音楽名  📍 位置情報</text>
+
+  <!-- Nav bar -->
+  <rect x="0" y="1815" width="1080" height="105" fill="rgba(0,0,0,0.6)"/>
+  <text x="540" y="1875" text-anchor="middle" fill="white" font-size="20" opacity="0.5">ナビゲーションバー</text>
+</svg>`;
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'instagram-reels-safe-zone-guide.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
